@@ -1,0 +1,22 @@
+name: Bug report
+description: Report reproducible app or installer behavior
+title: "[Bug]: "
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: App version, Windows versions, CPU architectures, network and primary/secondary roles. Do not include secrets or private files.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps and expected/actual result
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Safe diagnostic evidence
+      description: Include relevant error text and synthetic test details. Never paste keys, real clipboard contents or confidential data.

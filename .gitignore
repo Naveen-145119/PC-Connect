@@ -1,0 +1,15 @@
+work/
+outputs/
+**/bin/
+**/obj/
+.vs/
+.idea/
+*.user
+*.suo
+*.pfx
+*.p12
+*.pem
+*.key
+*.dpapi
+.env
+.env.*

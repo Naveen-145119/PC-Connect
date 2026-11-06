@@ -1,0 +1,42 @@
+name: Publish preview release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact app version from csproj (without v)
+        required: true
+        default: 0.2.0-preview.1
+permissions:
+  contents: write
+concurrency:
+  group: publish-preview
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.403
+      - name: Validate release version
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          [xml]$project = Get-Content src/PCConnect.App/PCConnect.App.csproj
+          if ($env:RELEASE_VERSION -notmatch '^\d+\.\d+\.\d+-preview\.\d+$' -or $env:RELEASE_VERSION -ne $project.Project.PropertyGroup.Version) { throw 'Expected the exact preview version from csproj' }
+      - name: Test and build
+        shell: pwsh
+        run: ./build.ps1 -Installer
+      - name: Publish installers and checksums
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          $assets = @(Get-ChildItem outputs/PCConnect-Setup-*,outputs/PCConnect-Portable-*.zip,outputs/SHA256SUMS.txt | ForEach-Object FullName)
+          gh release create "v$env:RELEASE_VERSION" @assets --target $env:RELEASE_COMMIT --title "PC Connect $env:RELEASE_VERSION" --prerelease --notes-file docs/RELEASE-NOTES.md
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
