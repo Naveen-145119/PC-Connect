@@ -1,5 +1,5 @@
 #ifndef AppVersion
-#define AppVersion "0.2.0-preview.1"
+#define AppVersion "0.2.0-preview.2"
 #endif
 #ifndef Rid
 #define Rid "win-x64"
@@ -38,7 +38,7 @@ SolidCompression=yes
 CloseApplications=yes
 RestartApplications=no
 AppMutex=Local\PCConnect-{username}
-VersionInfoVersion=0.2.0.0
+VersionInfoVersion=0.2.0.2
 VersionInfoProductName=PC Connect
 VersionInfoDescription=PC Connect Setup
 [Files]

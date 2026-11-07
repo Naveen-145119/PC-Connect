@@ -9,8 +9,8 @@ namespace PCConnect.App;
 internal sealed class MainForm : Form
 {
     readonly X509Certificate2 identity;
-    readonly ChoiceControl role = SelectBox();
-    readonly ChoiceControl side = SelectBox();
+    readonly ChoiceControl role = new("Primary · personal laptop", "Secondary · office laptop");
+    readonly ChoiceControl side = new("Office laptop on the right", "Office laptop on the left");
     readonly TextBox host = Edit("e.g. 192.168.1.24");
     readonly TextBox pin = Edit("Paste the fingerprint from your other laptop");
     readonly NumericUpDown port = Number(1024, 65534, 45831);
@@ -61,7 +61,6 @@ internal sealed class MainForm : Form
         status.Dock = DockStyle.Fill; footer.Controls.Add(status);
         var main = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Bg }; main.Controls.Add(content); main.Controls.Add(footer);
         Controls.Add(main); Controls.Add(sidebar);
-        role.Items.AddRange(["Primary · personal laptop", "Secondary · office laptop"]); side.Items.AddRange(["Office laptop on the right", "Office laptop on the left"]);
         BuildOverview(); BuildPairing(); BuildTransfers(); BuildDiagnostics();
         settingsControls.AddRange([role, side, host, pin, port, rate]);
         var saved = LocalData.Load(); role.SelectedIndex = saved.Primary ? 0 : 1; side.SelectedIndex = saved.Right ? 0 : 1;
@@ -70,7 +69,8 @@ internal sealed class MainForm : Form
         connect.Click += async (_, _) => { if (node == null) await Start(); else await Stop(); };
         clipboard.CheckedChanged += (_, _) => { if (node != null) node.ClipboardEnabled = clipboard.Checked; lastClipboard = null; clipboardSequence = Native.GetClipboardSequenceNumber(); };
         edgeToggle.CheckedChanged += (_, _) => UpdateEdge();
-        role.SelectedIndexChanged += (_, _) => { host.Enabled = role.SelectedIndex == 0 && node == null; };
+        role.SelectedIndexChanged += (_, _) => UpdateHostEnabled();
+        UpdateHostEnabled();
         received.MouseDown += (_, e) =>
         {
             int index = received.IndexFromPoint(e.Location); if (e.Button != MouseButtons.Left || index < 0) return;
@@ -90,7 +90,6 @@ internal sealed class MainForm : Form
     static Label TextLabel(string text, float size, Color color, bool bold = false) => new() { Text = text, Font = Theme.Font(size, bold), ForeColor = color, BackColor = Color.Transparent, AutoEllipsis = true, TextAlign = ContentAlignment.MiddleLeft, Height = 28 };
     static TextBox Edit(string placeholder) => new() { PlaceholderText = placeholder, BorderStyle = BorderStyle.None, BackColor = Theme.Field, ForeColor = Theme.Ink, Font = Theme.Font(11) };
     static NumericUpDown Number(int min, int max, int value) => new() { Minimum = min, Maximum = max, Value = value, BorderStyle = BorderStyle.None, BackColor = Theme.Field, ForeColor = Theme.Ink, Font = Theme.Font(11) };
-    static ChoiceControl SelectBox() => new();
     Panel Page(string title, string subtitle)
     {
         var page = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Bg, AutoScroll = true, Visible = false };
@@ -211,11 +210,14 @@ internal sealed class MainForm : Form
         }
         catch (Exception ex) { await Stop(); Log(ex.Message); }
     }
+    void UpdateHostEnabled() => host.Enabled = role.SelectedIndex == 0 && node == null;
+
     async Task Stop()
     {
         dragBridge?.Dispose(); dragBridge = null; var old = node; node = null;
         input?.ReturnLocal(); if (old != null) await old.DisposeAsync(); input?.Dispose(); input = null;
         foreach (var c in settingsControls) c.Enabled = true; connect.Text = "Connect securely  →";
+        UpdateHostEnabled();
         Log("Disconnected · local control");
     }
     async Task Tick()

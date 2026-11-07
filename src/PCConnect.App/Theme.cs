@@ -151,21 +151,88 @@ internal sealed class DropCanvas : Control
 
 internal sealed class ChoiceControl : Control
 {
-    internal List<string> Items { get; } = [];
+    readonly ContextMenuStrip menu;
     int selected = -1;
+
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    internal int SelectedIndex { get => selected; set { if (selected == value) return; selected = value; Invalidate(); SelectedIndexChanged?.Invoke(this, EventArgs.Empty); } }
+    internal int SelectedIndex
+    {
+        get => selected;
+        set
+        {
+            if (selected == value) return;
+            selected = value;
+            Invalidate();
+            SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
     public event EventHandler? SelectedIndexChanged;
-    public ChoiceControl() { DoubleBuffered = true; Font = Theme.Font(10); BackColor = Theme.Field; ForeColor = Theme.Ink; Cursor = Cursors.Hand; TabStop = true; AccessibleRole = AccessibleRole.ComboBox; }
+
+    public ChoiceControl(params string[] options)
+    {
+        DoubleBuffered = true;
+        Font = Theme.Font(10);
+        BackColor = Theme.Field;
+        ForeColor = Theme.Ink;
+        Cursor = Cursors.Hand;
+        TabStop = true;
+        AccessibleRole = AccessibleRole.ComboBox;
+        menu = new ContextMenuStrip { BackColor = Theme.Field, ForeColor = Theme.Ink, ShowImageMargin = false };
+        for (int i = 0; i < options.Length; i++)
+        {
+            int index = i;
+            menu.Items.Add(options[i], null, (_, _) => SelectedIndex = index);
+        }
+    }
+
     protected override void OnPaint(PaintEventArgs e)
-    { e.Graphics.Clear(BackColor); Theme.Text(e.Graphics, selected < 0 ? "Choose…" : Items[selected], new Rectangle(0, 0, Width - 24, Height), Font, Enabled ? ForeColor : Theme.Muted); Theme.Text(e.Graphics, "⌄", new Rectangle(Width - 22, 0, 22, Height), Font, Theme.Accent, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+    {
+        e.Graphics.Clear(BackColor);
+        var label = selected < 0 ? "Choose…" : menu.Items[selected].Text ?? "";
+        Theme.Text(e.Graphics, label, new Rectangle(0, 0, Width - 24, Height), Font, Enabled ? ForeColor : Theme.Muted);
+        Theme.Text(e.Graphics, "⌄", new Rectangle(Width - 22, 0, 22, Height), Font, Theme.Accent,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+    }
+
     protected override void OnClick(EventArgs e)
     {
-        base.OnClick(e); Focus();
-        var menu = new ContextMenuStrip { BackColor = Theme.Field, ForeColor = Theme.Ink, ShowImageMargin = false, Font = Font };
-        for (int i = 0; i < Items.Count; i++) { int index = i; var item = menu.Items.Add(Items[i]); item.Click += (_, _) => SelectedIndex = index; }
-        menu.Closed += (_, _) => menu.Dispose(); menu.Show(this, new Point(0, Height + 8));
+        base.OnClick(e);
+        Focus();
+        menu.Font = Font;
+        menu.Show(this, new Point(0, Height + 8));
     }
-    protected override void OnKeyDown(KeyEventArgs e) { base.OnKeyDown(e); if (e.KeyCode is Keys.Space or Keys.Enter) { OnClick(EventArgs.Empty); e.Handled = true; } else if (e.KeyCode is Keys.Left or Keys.Up) { SelectedIndex = Math.Max(0, selected - 1); e.Handled = true; } else if (e.KeyCode is Keys.Right or Keys.Down) { SelectedIndex = Math.Min(Items.Count - 1, selected + 1); e.Handled = true; } }
-    protected override bool IsInputKey(Keys keyData) => keyData is Keys.Left or Keys.Right or Keys.Up or Keys.Down || base.IsInputKey(keyData);
+
+    protected override void Dispose(bool disposing)
+    {
+        // WinForms still uses the popup after it raises Closed during item activation.
+        if (disposing) menu.Dispose();
+        base.Dispose(disposing);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        switch (e.KeyCode)
+        {
+            case Keys.Space:
+            case Keys.Enter:
+                OnClick(EventArgs.Empty);
+                break;
+            case Keys.Left:
+            case Keys.Up:
+                SelectedIndex = Math.Max(0, selected - 1);
+                break;
+            case Keys.Right:
+            case Keys.Down:
+                SelectedIndex = Math.Min(menu.Items.Count - 1, selected + 1);
+                break;
+            default:
+                return;
+        }
+        e.Handled = true;
+    }
+
+    protected override bool IsInputKey(Keys keyData) =>
+        keyData is Keys.Left or Keys.Right or Keys.Up or Keys.Down || base.IsInputKey(keyData);
 }

@@ -9,6 +9,8 @@ New-Item -ItemType Directory -Force outputs,outputs\packages | Out-Null
 if (-not $SkipTests) {
     & $dotnet run --project tests\PCConnect.Tests -c Release -- --report outputs\test-results.txt
     if ($LASTEXITCODE -ne 0) { throw 'Automated tests failed' }
+    & $dotnet run --project tests\PCConnect.UiTests -c Release
+    if ($LASTEXITCODE -ne 0) { throw 'Pairing UI regression failed' }
 }
 $artifacts = @()
 foreach ($rid in @('win-x64','win-arm64')) {

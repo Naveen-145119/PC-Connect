@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0-preview.2 — 2026-11-07
+
+- Fixed a crash when selecting the office laptop role or changing the screen arrangement in Pair devices.
+- The secondary laptop IP field now follows the selected role when restoring settings or disconnecting.
+
 ## 0.2.0-preview.1 — 2026-11-06
 
 - First public open-source preview, MIT license and Windows build/release automation.
